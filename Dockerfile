@@ -10,5 +10,8 @@ COPY app.py .
 # Cài đặt Flask
 RUN pip install flask
 
+# Expose cổng 5000
+EXPOSE 5000
+
 # Chạy ứng dụng
 CMD ["python", "app.py"]
