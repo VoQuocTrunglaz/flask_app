@@ -1,8 +1,1 @@
-paddlepaddle==2.6.2 -f https://www.paddlepaddle.org.cn/whl/cpu.html
-numpy==1.26.4
-Pillow==9.5.0
-fastapi==0.95.0
-uvicorn==0.22.0
-ultralytics==7.0.0
-opencv-python-headless==4.8.0.76
-rapidfuzz==2.0.0
+fastapi
