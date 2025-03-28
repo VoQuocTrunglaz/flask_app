@@ -20,10 +20,24 @@ jobs:
           chmod 600 ~/.ssh/aws_key.pem
           ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
 
+      - name: 📂 Tạo thư mục `my-app` trên EC2
+        run: |
+          ssh -i ~/.ssh/aws_key.pem ubuntu@${{ secrets.AWS_HOST }} "mkdir -p /home/ubuntu/my-app"
+
+      - name: 📤 Đẩy code lên EC2 qua SCP
+        run: |
+          scp -i ~/.ssh/aws_key.pem -r ./* ubuntu@${{ secrets.AWS_HOST }}:/home/ubuntu/my-app/
+
       - name: 🚀 Kết nối SSH & Deploy
         run: |
           ssh -i ~/.ssh/aws_key.pem ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
             cd /home/ubuntu/my-app
-            git pull origin main
-            bash deploy.sh
+
+            echo "🐍 Cài đặt môi trường Python"
+            sudo apt update -y
+            sudo apt install -y python3-pip
+            pip3 install -r requirements.txt
+
+            echo "🚀 Chạy ứng dụng"
+            nohup python3 app.py > output.log 2>&1 &
           EOF
