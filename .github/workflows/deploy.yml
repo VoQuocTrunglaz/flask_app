@@ -33,11 +33,17 @@ jobs:
           ssh -i ~/.ssh/aws_key.pem ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
             cd /home/ubuntu/my-app
 
-            echo "🐍 Cài đặt môi trường Python"
+            echo "🐍 Cài đặt môi trường Python (venv)"
             sudo apt update -y
-            sudo apt install -y python3-pip
-            pip3 install -r requirements.txt
+            sudo apt install -y python3-venv python3-pip
+
+            python3 -m venv venv
+            source venv/bin/activate
+
+            echo "📦 Cài đặt dependencies"
+            pip install -r requirements.txt
 
             echo "🚀 Chạy ứng dụng"
-            nohup python3 app.py > output.log 2>&1 &
+            nohup venv/bin/python app.py > output.log 2>&1 &
           EOF
+
