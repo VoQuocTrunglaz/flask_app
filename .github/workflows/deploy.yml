@@ -1,43 +1,45 @@
-name: 🚀 Deploy Flask App to EC2
+name: Deploy Python App to EC2
 
 on:
   push:
     branches:
-      - main  # Chạy khi có thay đổi trên nhánh main
+      - main  # Chạy khi có push lên branch main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: 🚀 Kết nối SSH và triển khai
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.AWS_HOST }}
-        username: ${{ secrets.AWS_USER }}
-        key: ${{ secrets.AWS_KEY }}
-        script: |
-          echo "🔄 Cập nhật server..."
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install python3 python3-pip python3.12-venv rsync -y
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_KEY }}" > ~/.ssh/aws_key.pem
+          chmod 600 ~/.ssh/aws_key.pem
 
-          echo "📂 Đồng bộ code với EC2"
-          rsync -av --exclude='.git' --exclude='ec2_env' $GITHUB_WORKSPACE/ ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }}:/home/${{ secrets.AWS_USER }}/myapp
+      - name: Deploy and Run Python App on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/aws_key.pem ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} << 'EOF'
+            # Chuyển đến thư mục ứng dụng
+            cd /home/ubuntu/myapp
 
-          echo "🔧 Thiết lập Virtual Environment"
-          cd /home/${{ secrets.AWS_USER }}/myapp
-          python3 -m venv ec2_env
-          source ec2_env/bin/activate
+            # Cập nhật code mới nhất từ GitHub
+            git pull origin main
 
-          echo "📦 Cài đặt dependencies"
-          pip install --upgrade pip
-          pip install -r requirements.txt
+            # Cài đặt Python và môi trường ảo nếu chưa có
+            sudo apt update
+            sudo apt install -y python3 python3-pip python3-venv
 
-          echo "🚀 Khởi động lại ứng dụng"
-          pkill -f app.py || true
-          nohup python app.py > app.log 2>&1 &
+            # Tạo và kích hoạt môi trường ảo
+            python3 -m venv venv
+            source venv/bin/activate
 
-          echo "✅ Deployment hoàn tất!"
+            # Cài đặt thư viện từ requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            # Chạy ứng dụng Python
+            nohup python3 app.py > output.log 2>&1 &
+          EOF
