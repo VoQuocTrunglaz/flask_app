@@ -1,55 +1,43 @@
-name: Deploy Flask App to AWS EC2
+name: 🚀 Deploy Flask App to EC2
 
 on:
   push:
     branches:
-      - main
+      - main  # Chạy khi có thay đổi trên nhánh main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🔄 Lấy mã nguồn mới nhất
-        uses: actions/checkout@v4
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
 
-      - name: 📦 Cài đặt Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
+    - name: 🚀 Kết nối SSH và triển khai
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.AWS_HOST }}
+        username: ${{ secrets.AWS_USER }}
+        key: ${{ secrets.AWS_KEY }}
+        script: |
+          echo "🔄 Đang cập nhật server..."
+          sudo apt update && sudo apt upgrade -y
+          sudo apt install python3.12-venv -y
 
-      - name: 📦 Cài đặt dependencies
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
+          echo "📂 Đồng bộ code với EC2"
+          rsync -av --exclude='.git' --exclude='ec2_env' $GITHUB_WORKSPACE ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }}:/home/${{ secrets.AWS_USER }}/flask-api
 
-      - name: 🔑 Thiết lập SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
-
-      - name: 📤 Đẩy code lên EC2
-        run: |
-          scp -r . ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }}:/home/${{ secrets.AWS_USER }}/flask-api
-
-      - name: 🚀 Kết nối vào EC2 và triển khai
-        run: |
-          ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} << 'EOF'
+          echo "🔧 Thiết lập Virtual Environment"
           cd /home/${{ secrets.AWS_USER }}/flask-api
-          git pull origin main
-          
-          # Cài đặt môi trường ảo (nếu chưa có)
           python3 -m venv ec2_env
           source ec2_env/bin/activate
 
-          # Cập nhật dependencies
+          echo "📦 Cài đặt dependencies"
+          pip install --upgrade pip
           pip install -r requirements.txt
+
+          echo "🚀 Khởi động lại ứng dụng"
+          pkill -f app.py || true
+          nohup python app.py > app.log 2>&1 &
           
-          # Khởi động lại service
-          sudo systemctl daemon-reload
-          sudo systemctl restart flaskapp.service
-          sudo systemctl enable flaskapp.service
-          EOF
+          echo "✅ Deployment hoàn tất!"
