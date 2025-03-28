@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   deploy:
@@ -16,22 +13,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.9"
-
-      - name: Install dependencies
+      - name: Set up SSH key
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Run Flask App
+      - name: Deploy to EC2
         run: |
-          pip install gunicorn
-          gunicorn -w 4 -b 0.0.0.0:5000 app:app &
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} << 'EOF'
+            set -e  # Dừng script nếu có lỗi xảy ra
+            
+            echo ">>> Chuyển đến thư mục dự án"
+            cd ~/flask-api  # Đảm bảo đây là thư mục đúng
 
-      - name: Test Flask App
-        run: |
-          sleep 5  # Chờ app khởi động
-          curl -f http://127.0.0.1:5000
+            echo ">>> Pull code mới từ GitHub"
+            git pull origin main
+
+            echo ">>> Kích hoạt môi trường ảo"
+            source venv/bin/activate
+
+            echo ">>> Cài đặt các gói cần thiết"
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            echo ">>> Khởi động lại dịch vụ Flask"
+            sudo systemctl daemon-reload
+            sudo systemctl restart flaskapp
+
+            echo ">>> Hoàn tất deploy!"
+          EOF
