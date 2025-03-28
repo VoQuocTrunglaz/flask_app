@@ -1,53 +1,52 @@
-name: CI/CD Pipeline
+name: Deploy to EC2
 
 on:
   push:
     branches:
-      - main
+      - main  # Chạy khi có push vào nhánh main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+    - name: Thiết lập SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} << 'EOF'
-            echo ">>> Kiểm tra thư mục dự án trên EC2"
-            if [ ! -d "~/flask-api/.git" ]; then
-              echo ">>> Thư mục không tồn tại hoặc không phải Git repository. Cloning lại..."
-              rm -rf ~/flask-api
-              git clone <GITHUB_REPO_URL> ~/flask-api
-            fi
+    - name: SSH vào EC2 và deploy code
+      run: |
+        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+          echo ">>> Kiểm tra thư mục dự án trên EC2"
+          if [ ! -d "~/flask-api/.git" ]; then
+            echo ">>> Thư mục không tồn tại hoặc không phải Git repository. Cloning lại..."
+            rm -rf ~/flask-api
+            git clone https://github.com/<USERNAME>/<REPO>.git ~/flask-api || exit 1
+          fi
 
-            echo ">>> Chuyển đến thư mục dự án"
-            cd ~/flask-api || exit 1
+          echo ">>> Chuyển đến thư mục dự án"
+          cd ~/flask-api || exit 1
 
-            echo ">>> Đặt lại code về trạng thái mới nhất"
-            git reset --hard
-            git pull origin main || exit 1
+          echo ">>> Đặt lại code về trạng thái mới nhất"
+          git reset --hard
+          git pull origin main || exit 1
 
-            echo ">>> Cài đặt môi trường ảo (nếu chưa có)"
-            if [ ! -d "venv" ]; then
-              python3 -m venv venv
-            fi
-            source venv/bin/activate || exit 1
+          echo ">>> Cài đặt môi trường ảo (nếu chưa có)"
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
+          source venv/bin/activate || exit 1
 
-            echo ">>> Cập nhật dependencies"
-            pip install --upgrade pip
-            pip install -r requirements.txt || exit 1
+          echo ">>> Cập nhật dependencies"
+          pip install --upgrade pip
+          pip install -r requirements.txt || exit 1
 
-            echo ">>> Khởi động lại service"
-            sudo systemctl restart flaskapp || exit 1
-          EOF
-   
+          echo ">>> Khởi động lại service"
+          sudo systemctl restart flaskapp || exit 1
+        EOF
