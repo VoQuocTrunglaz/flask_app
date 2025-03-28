@@ -23,24 +23,19 @@ jobs:
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} << 'EOF'
-            set -e  # Dừng script nếu có lỗi xảy ra
-            
             echo ">>> Chuyển đến thư mục dự án"
-            cd ~/flask-api  # Đảm bảo đây là thư mục đúng
-
+            cd ~/flask-api || exit 1
+            
             echo ">>> Pull code mới từ GitHub"
-            git pull origin main
-
+            git reset --hard
+            git pull origin main || exit 1
+            
             echo ">>> Kích hoạt môi trường ảo"
-            source venv/bin/activate
-
-            echo ">>> Cài đặt các gói cần thiết"
-            pip install --upgrade pip
-            pip install -r requirements.txt
-
-            echo ">>> Khởi động lại dịch vụ Flask"
-            sudo systemctl daemon-reload
-            sudo systemctl restart flaskapp
-
-            echo ">>> Hoàn tất deploy!"
+            source venv/bin/activate || exit 1
+            
+            echo ">>> Cập nhật dependencies"
+            pip install -r requirements.txt || exit 1
+            
+            echo ">>> Khởi động lại service"
+            sudo systemctl restart flaskapp || exit 1
           EOF
