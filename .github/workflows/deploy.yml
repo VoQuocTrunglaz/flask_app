@@ -20,15 +20,15 @@ jobs:
         username: ${{ secrets.AWS_USER }}
         key: ${{ secrets.AWS_KEY }}
         script: |
-          echo "🔄 Đang cập nhật server..."
+          echo "🔄 Cập nhật server..."
           sudo apt update && sudo apt upgrade -y
-          sudo apt install python3.12-venv -y
+          sudo apt install python3 python3-pip python3.12-venv rsync -y
 
           echo "📂 Đồng bộ code với EC2"
-          rsync -av --exclude='.git' --exclude='ec2_env' $GITHUB_WORKSPACE ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }}:/home/${{ secrets.AWS_USER }}/myapp
+          rsync -av --exclude='.git' --exclude='ec2_env' $GITHUB_WORKSPACE/ ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }}:/home/${{ secrets.AWS_USER }}/myapp
 
           echo "🔧 Thiết lập Virtual Environment"
-          cd /home/${{ secrets.AWS_USER }}/flask-api
+          cd /home/${{ secrets.AWS_USER }}/myapp
           python3 -m venv ec2_env
           source ec2_env/bin/activate
 
@@ -39,5 +39,5 @@ jobs:
           echo "🚀 Khởi động lại ứng dụng"
           pkill -f app.py || true
           nohup python app.py > app.log 2>&1 &
-          
+
           echo "✅ Deployment hoàn tất!"
