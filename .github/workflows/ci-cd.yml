@@ -23,30 +23,39 @@ jobs:
     - name: SSH vào EC2 và deploy code
       run: |
         ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+          set -e  # Dừng script nếu có lỗi xảy ra
+
           echo ">>> Kiểm tra thư mục dự án trên EC2"
-          if [ ! -d "~/flask-api/.git" ]; then
+          if [ ! -d ~/flask-api ] || [ ! -d ~/flask-api/.git ]; then
             echo ">>> Thư mục không tồn tại hoặc không phải Git repository. Cloning lại..."
             rm -rf ~/flask-api
-            git clone https://github.com/VoQuocTrunglaz/flask_app.git ~/flask-api || exit 1
+            git clone https://github.com/VoQuocTrunglaz/flask_app.git ~/flask-api
           fi
 
           echo ">>> Chuyển đến thư mục dự án"
-          cd ~/flask-api || exit 1
+          cd ~/flask-api
 
           echo ">>> Đặt lại code về trạng thái mới nhất"
           git reset --hard
-          git pull origin main || exit 1
+          git pull origin main
 
           echo ">>> Cài đặt môi trường ảo (nếu chưa có)"
           if [ ! -d "venv" ]; then
             python3 -m venv venv
           fi
-          source venv/bin/activate || exit 1
+
+          echo ">>> Kích hoạt môi trường ảo"
+          source venv/bin/activate
 
           echo ">>> Cập nhật dependencies"
           pip install --upgrade pip
-          pip install -r requirements.txt || exit 1
+          pip install -r requirements.txt
 
-          echo ">>> Khởi động lại service"
-          sudo systemctl restart flaskapp || exit 1
+          echo ">>> Kiểm tra và khởi động lại service Flask"
+          sudo systemctl daemon-reload
+          sudo systemctl restart flaskapp
+          sudo systemctl enable flaskapp
+
+          echo ">>> Kiểm tra trạng thái service"
+          sudo systemctl status flaskapp --no-pager
         EOF
