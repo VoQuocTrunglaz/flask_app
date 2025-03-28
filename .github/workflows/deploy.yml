@@ -16,10 +16,10 @@ jobs:
       - name: Cấu hình SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/aws_key.pem
-          chmod 600 ~/.ssh/aws_key.pem
-          ls -la ~/.ssh/  # Kiểm tra xem file có tồn tại không
-          ssh-keyscan -H 13.250.14.234 >> ~/.ssh/known_hosts  # Thay bằng IP của bạn
+          printf "%s" "${{ secrets.AWS_KEY }}" > ~/.ssh/myapp.pem  # Đổi tên file nếu cần
+          chmod 600 ~/.ssh/myapp.pem
+          ls -la ~/.ssh/  # Kiểm tra file đã tạo thành công chưa
+          ssh-keyscan -H 13.250.14.234 >> ~/.ssh/known_hosts  # Thêm server vào danh sách tin cậy
 
       - name: Kiểm tra kết nối SSH
-        run: ssh -i ~/.ssh/aws_key.pem ubuntu@13.250.14.234 "echo 'SSH OK'"
+        run: ssh -i ~/.ssh/myapp.pem ubuntu@13.250.14.234 "echo 'SSH OK'"
