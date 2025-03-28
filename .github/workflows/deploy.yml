@@ -1,3 +1,10 @@
+name: Deploy Python App to EC2
+
+on:
+  push:
+    branches:
+      - main  # Chạy khi có push lên branch main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
