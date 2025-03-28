@@ -16,7 +16,7 @@ jobs:
     - name: Thiết lập SSH Key
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ secrets.AWS_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
 
@@ -27,7 +27,7 @@ jobs:
           if [ ! -d "~/flask-api/.git" ]; then
             echo ">>> Thư mục không tồn tại hoặc không phải Git repository. Cloning lại..."
             rm -rf ~/flask-api
-            git clone https://github.com/<USERNAME>/<REPO>.git ~/flask-api || exit 1
+            git clone https://github.com/VoQuocTrunglaz/flask_app.git ~/flask-api || exit 1
           fi
 
           echo ">>> Chuyển đến thư mục dự án"
