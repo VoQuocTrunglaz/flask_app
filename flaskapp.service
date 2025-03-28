@@ -1,0 +1,12 @@
+[Unit]
+Description=Flask API Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/flask-api
+ExecStart=/home/ubuntu/flask-api/venv/bin/python /home/ubuntu/flask-api/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
