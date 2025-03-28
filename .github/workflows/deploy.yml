@@ -10,16 +10,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: 📥 Lấy code từ GitHub
         uses: actions/checkout@v3
 
-      - name: Cấu hình SSH Key
+      - name: 🔑 Thiết lập SSH key
         run: |
           mkdir -p ~/.ssh
-          printf "%s" "${{ secrets.AWS_KEY }}" > ~/.ssh/myapp.pem  # Đổi tên file nếu cần
-          chmod 600 ~/.ssh/myapp.pem
-          ls -la ~/.ssh/  # Kiểm tra file đã tạo thành công chưa
-          ssh-keyscan -H 13.250.14.234 >> ~/.ssh/known_hosts  # Thêm server vào danh sách tin cậy
+          echo "${{ secrets.AWS_KEY }}" > ~/.ssh/aws_key.pem
+          chmod 600 ~/.ssh/aws_key.pem
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Kiểm tra kết nối SSH
-        run: ssh -i ~/.ssh/myapp.pem ubuntu@13.250.14.234 "echo 'SSH OK'"
+      - name: 🚀 Kết nối SSH & Deploy
+        run: |
+          ssh -i ~/.ssh/aws_key.pem ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+            cd /home/ubuntu/my-app
+            git pull origin main
+            bash deploy.sh
+          EOF
