@@ -30,7 +30,7 @@ jobs:
 
       - name: 📤 Copy file service lên EC2
         run: |
-          scp -i ~/.ssh/aws_key.pem myapp.service ubuntu@${{ secrets.AWS_HOST }}:/home/ubuntu/
+          scp -i ~/.ssh/aws_key.pem myapp.service ubuntu@${{ secrets.AWS_HOST }}:/home/ubuntu/my-app/
 
       - name: 🚀 Thiết lập môi trường trên EC2 & Deploy
         run: |
