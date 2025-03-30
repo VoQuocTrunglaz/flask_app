@@ -26,18 +26,14 @@ jobs:
 
       - name: 🚀 Dừng service trước khi cập nhật code
         run: |
-          ssh -i ~/.ssh/aws_key.pem ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+          ssh -i ~/.ssh/aws_key.pem ubuntu@${{ sescrets.AWS_HOST }} << 'EOF'
             echo "🛑 Dừng service trước khi cập nhật"
-            sudo systemctl stop myapp || echo "Service chưa chạy hoặc không tồn tại"
+            sudo systemctl top myapp || echo "Service chưa chạy hoặc không tồn tại"
           EOF
 
       - name: 📤 Đẩy code lên EC2 qua SCP
         run: |
-          scp -i ~/.ssh/aws_key.pem -r app.py requirements.txt ubuntu@${{ secrets.AWS_HOST }}:/home/ubuntu/my-app/
-
-      - name: 📤 Copy file service lên EC2
-        run: |
-          scp -i ~/.ssh/aws_key.pem .github/workflows/myapp.service ubuntu@${{ secrets.AWS_HOST }}:/home/ubuntu/my-app/
+          scp -i ~/.ssh/aws_key.pem -r app.py myapp.service requirements.txt ubuntu@${{ secrets.AWS_HOST }}:/home/ubuntu/my-app/
 
       - name: 🚀 Cập nhật môi trường & restart service
         run: |

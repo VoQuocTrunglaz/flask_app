@@ -1,0 +1,58 @@
+name: Deploy Docker App to EC2
+
+on:
+  push:
+    branches:
+      - main  # Chạy khi có push lên branch main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 📌 pre_build: Chuẩn bị môi trường
+      - name: 📥 Lấy code từ GitHub
+        uses: actions/checkout@v3
+
+      - name: 🔑 Thiết lập SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_KEY }}" > ~/.ssh/aws_key.pem
+          chmod 600 ~/.ssh/aws_key.pem
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Convert repository name to lowercase
+        run: echo "REPO_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # 📌 build: Build & Push Docker Image lên GHCR
+      - name: 🏗️ Build Docker Image
+        run: |
+          docker build -t ghcr.io/${{ env.REPO_NAME }}/my-app:latest .
+
+      - name: 📤 Push Docker Image lên GHCR
+        run: |
+          docker push ghcr.io/${{ env.REPO_NAME }}/my-app:latest
+
+      # 📌 deploy: Triển khai lên EC2
+      - name: 🚀 Deploy Docker Container trên EC2
+        run: |
+          ssh -i ~/.ssh/aws_key.pem ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+            echo "🚀 Đăng nhập vào GHCR trên EC2"
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "📥 Pull image mới nhất từ GHCR"
+            docker pull ghcr.io/${{ env.REPO_NAME }}/my-app:latest
+            
+            echo "🛑 Dừng & xóa container cũ nếu có"
+            docker stop my-app || true
+            docker rm my-app || true
+            
+            echo "🚀 Chạy container mới"
+            docker run -d --restart=always -p 80:5000 --name my-app ghcr.io/${{ env.REPO_NAME }}/my-app:latest
+
+            echo "✅ Kiểm tra container đang chạy"
+            docker ps
+          EOF
