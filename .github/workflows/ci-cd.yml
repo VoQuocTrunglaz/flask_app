@@ -36,6 +36,18 @@ jobs:
         run: |
           docker push ghcr.io/${{ env.REPO_NAME }}/my-app:latest
 
+      - name: 🛠️ Cài đặt Docker trên EC2
+        run: |
+          ssh -i ~/.ssh/aws_key.pem ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+            sudo apt update && sudo apt upgrade -y
+            sudo apt install -y docker.io
+            sudo systemctl enable docker
+            sudo systemctl start docker
+            sudo usermod -aG docker ubuntu
+            newgrp docker
+            echo "✅ Docker đã được cài đặt thành công!"
+          EOF
+
       # 📌 deploy: Triển khai lên EC2
       - name: 🚀 Deploy Docker Container trên EC2
         run: |
